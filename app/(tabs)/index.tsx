@@ -1,14 +1,19 @@
+import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import instance from '../../api/axiosInstance'; // 아까 만든 axios 인스턴스 파일
+
+
 export default function LoginScreen() {
-  const [username, setUsername] = useState('');
+
+  const [email, setUserEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const handleLogin = async () => {
-    if (!username || !password) {
+    if (!email || !password) {
       Alert.alert('알림', '이메일과 비밀번호를 모두 입력해주세요.');
       return;
     }
@@ -16,20 +21,32 @@ export default function LoginScreen() {
     setIsLoading(true);
     try {
       // 1. axios 인스턴스를 사용한 로그인 요청
-      const response = await instance.post('http://192.168.10.56:5000/api/users/login', {
-        username: username,
+      // const response = await instance.post('http://192.168.10.56:5000/api/users/login', {
+      //   email: email,
+      //   password: password,
+      // });
+      const response = await instance.post('http://192.168.45.76:5000/api/users/login', {
+        email: email,
         password: password,
       });
 
       // 2. 로그인 성공 처리
       if (response.status === 200) {
-        const { id } = response.data.user.id;
-        console.log(response.data.user.id)
+        const userObj = response.data.user;
+        console.log(response.data.user)
         // Alert.alert(response.data)
-        await SecureStore.setItemAsync('userToken', id)
+        await SecureStore.setItemAsync('userSession', JSON.stringify(userObj))
 
-        Alert.alert('성공', '환영합니다!');
-        // console.log('Token:', response.data.token); // 서버에서 준 토큰 확인
+        Alert.alert('성공', '환영합니다!', [
+          {
+            text: '확인',
+            onPress: () => {
+              // 3. Upload 화면으로 이동 (스택 교체)
+              // 'replace'를 쓰면 로그인 화면이 뒤로가기 스택에서 사라집니다.
+              router.replace('/upload');
+            },
+          },
+        ]);
       }
     } catch (error: any) {
       // 3. 에러 처리
@@ -46,14 +63,17 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
+
       <View style={styles.loginBox}>
-        <Text style={styles.title}>TriPy</Text>
+        <View style={stylesLogo.logo}>
+          <Image source={require('../../assets/images/tripy.png')} style={stylesLogo.localImage} />
+        </View>
 
         <TextInput
           style={styles.input}
-          placeholder="user name"
-          value={username}
-          onChangeText={setUsername}
+          placeholder="email"
+          value={email}
+          onChangeText={setUserEmail}
           autoCapitalize="none"
         />
 
@@ -92,3 +112,8 @@ const styles = StyleSheet.create({
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
   link: { color: '#007AFF', fontWeight: 'bold' },
 });
+const stylesLogo = StyleSheet.create({
+  logo: { justifyContent: 'center', alignItems: 'center' },
+  localImage: { width: 180, height: 100, }
+
+})
