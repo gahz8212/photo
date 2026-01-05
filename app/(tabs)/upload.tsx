@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Alert, Button, Image, StyleSheet, View, } from 'react-native';
 import instance from '../../api/axiosInstance';
 
-export default function App() {
+export default function UploadScreen() {
   // 상태 타입 지정: 사진 객체 또는 null
   const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
 
