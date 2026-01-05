@@ -5,7 +5,7 @@ const instance = axios.create({
   // baseURL: "http://192.168.10.56:5000/api",
   baseURL: "http://192.168.45.76:5000/api",
   withCredentials: true,
-  timeout: 5000, // 5초 안에 응답이 없으면 연결 종료
+  // timeout: 5000, // 5초 안에 응답이 없으면 연결 종료
   headers: {
     "Content-Type": "application/json",
   },
