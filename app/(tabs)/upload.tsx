@@ -110,6 +110,9 @@ export default function UploadScreen() {
     <View style={styles.container}>
       {/* 헤더 */}
       <View style={styles.header}>
+        <View style={styles.logoutWrapper}>
+          <Button title="로그아웃" onPress={handleLogout} color="red" />
+        </View>
         {/* 드롭다운 버튼 */}
         <TouchableOpacity
           style={styles.dropdownButton}
@@ -144,12 +147,12 @@ export default function UploadScreen() {
             ))}
           </View>
         )}
-        <Button title="사진 선택하기" onPress={pickImage} />
-
-        {image && <Image source={{ uri: image.uri }} style={styles.image} />}
-
-        <Button title="서버로 전송" onPress={uploadImage} color="#007AFF" />
       </View>
+      <Button title="사진 선택하기" onPress={pickImage} />
+
+      {image && <Image source={{ uri: image.uri }} style={styles.image} />}
+
+      <Button title="서버로 전송" onPress={uploadImage} color="#007AFF" />
     </View>
   );
 }
@@ -181,6 +184,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     fontSize: 12,
   },
+  image: { width: 300, height: 300, borderRadius: 10 },
+  logoutWrapper: { position: "absolute", top: 50, right: 20 }, // 로그아웃 버튼 위치
 });
 //   return (
 //     <View style={styles.container}>
