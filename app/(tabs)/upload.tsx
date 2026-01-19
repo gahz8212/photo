@@ -1,46 +1,124 @@
+// // server.js
+// const express = require("express");
+// const app = express();
+
+// app.use(express.json());
+
+// // 라벨 목록 API
+// app.get("/api/labels", (req, res) => {
+//   const labels = [
+//     { tripId: 1, label: "서울 여행" },
+//     { tripId: 2, label: "부산 여행" },
+//     { tripId: 3, label: "제주도 여행" },
+//     { tripId: 4, label: "강릉 여행" },
+//     { tripId: 5, label: "인천 여행" },
+//   ];
+//   res.json(labels);
+// });
+
+// // tripId + 사용자 정보 받기
+// app.post("/api/select-trip", (req, res) => {
+//   const { tripId, userId, userName } = req.body;
+//   console.log("선택된 tripId:", tripId);
+//   console.log("사용자 정보:", userId, userName);
+
+//   // DB 저장이나 추가 로직 수행
+//   res.json({ success: true, tripId, userId, userName });
+// });
+
+// app.listen(5000, () => {
+//   console.log("Server running on http://localhost:5000");
+// });
+
+
+
+
+
 import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router"; // 1. 라우터 추가
-import * as SecureStore from "expo-secure-store"; // 2. 저장소 삭제용
-import React, { useState } from "react";
+import { useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store";
+import React, { useState, useEffect } from "react";
 import {
   Alert,
   Button,
   Image,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { RadioButton } from "react-native-paper";
-
 import instance from "../../api/axiosInstance";
 
 export default function UploadScreen() {
-  const router = useRouter(); // 라우터 객체 생성
+  const router = useRouter();
   const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [radioValues, setRadioValues] = useState(Array(5).fill(false));
-  const [texts, setTexts] = useState(Array(5).fill(""));
+  const [radioValues, setRadioValues] = useState<boolean[]>([]);
+  const [labels, setLabels] = useState<{ tripId: number; label: string }[]>([]);
+  const [selectedTripId, setSelectedTripId] = useState<number | null>(null);
+  const [userInfo, setUserInfo] = useState<{ userId: string; userName: string } | null>(null);
+
+  // ✅ 사용자 정보 불러오기
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      const session = await SecureStore.getItemAsync("userSession");
+      if (session) {
+        const parsed = JSON.parse(session);
+        setUserInfo({ userId: parsed.userId, userName: parsed.userName });
+      }
+    };
+    loadUserInfo();
+  }, []);
+
+  // ✅ 서버에서 라벨 받아오기
+  useEffect(() => {
+    const fetchLabels = async () => {
+      try {
+        const response = await instance.get("/api/labels");
+        setLabels(response.data);
+        setRadioValues(Array(response.data.length).fill(false));
+      } catch (error) {
+        console.error("라벨 불러오기 실패:", error);
+      }
+    };
+    fetchLabels();
+  }, []);
 
   const handleRadioChange = (index: number) => {
-    const newValues = Array(5).fill(false);
+    const newValues = Array(labels.length).fill(false);
     newValues[index] = true;
     setRadioValues(newValues);
+    setSelectedTripId(labels[index].tripId);
   };
 
-  // --- 로그아웃 함수 추가 ---
+  // ✅ tripId + 사용자 정보 서버로 보내기
+  const sendSelectedTrip = async () => {
+    if (!selectedTripId || !userInfo) {
+      Alert.alert("알림", "사용자 정보와 tripId를 확인해주세요.");
+      return;
+    }
+    try {
+      const response = await instance.post("/api/select-trip", {
+        tripId: selectedTripId,
+        userId: userInfo.userId,
+        userName: userInfo.userName,
+      });
+      Alert.alert("성공", `tripId ${selectedTripId} + 사용자 정보 전송 완료`);
+      console.log(response.data);
+    } catch (error) {
+      console.error("tripId 전송 실패:", error);
+      Alert.alert("실패", "서버 연결 상태를 확인하세요.");
+    }
+  };
+
   const handleLogout = async () => {
     try {
-      // 1. (선택사항) 서버에 로그아웃 요청을 보내 세션 파괴
       await instance.post("http://192.168.45.16:5000/api/logout");
     } catch (e) {
-      console.log("로그아웃 요청 에러(무시 가능):", e);
+      console.log("로그아웃 요청 에러:", e);
     } finally {
-      // 2. 기기에 저장된 유저 정보 삭제
       await SecureStore.deleteItemAsync("userSession");
-
-      // 3. 로그인 화면(index)으로 이동
       Alert.alert("로그아웃", "정상적으로 로그아웃 되었습니다.");
       router.replace("/");
     }
@@ -70,32 +148,21 @@ export default function UploadScreen() {
       return;
     }
 
-    console.log(image);
     const formData = new FormData();
-
     formData.append("file", {
       uri: image.uri,
       name: image.fileName || "upload.jpg",
       type: "image/jpeg",
     } as any);
-    try {
-      // 여기서 세션이 만료(Redis TTL 만료)되었다면
-      // axiosInstance의 interceptor가 401을 감지하여 자동으로 index로 보낼 것입니다.
-      const response = await instance.post(
-        "http://192.168.45.66:5000/api/upload",
-        formData,
-        {
-          withCredentials: true,
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        },
-      );
 
+    try {
+      const response = await instance.post("http://s:5000/api/upload", formData, {
+        withCredentials: true,
+        headers: { "Content-Type": "multipart/form-data" },
+      });
       Alert.alert("성공", "서버에 저장되었습니다!");
       console.log(response.data);
     } catch (error: any) {
-      // 만약 인터셉터에서 처리를 안 했다면 여기서 직접 처리도 가능합니다.
       if (error.response?.status === 401) {
         Alert.alert("세션 만료", "다시 로그인해주세요.");
         router.replace("/");
@@ -108,12 +175,7 @@ export default function UploadScreen() {
 
   return (
     <View style={styles.container}>
-      {/* 헤더 */}
       <View style={styles.header}>
-        <View style={styles.logoutWrapper}>
-          <Button title="로그아웃" onPress={handleLogout} color="red" />
-        </View>
-        {/* 드롭다운 버튼 */}
         <TouchableOpacity
           style={styles.dropdownButton}
           onPress={() => setIsOpen(!isOpen)}
@@ -123,93 +185,61 @@ export default function UploadScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* 드롭다운 내부 */}
         {isOpen && (
           <View style={styles.dropdownContent}>
-            {texts.map((text, index) => (
-              <View key={index} style={styles.radioItem}>
+            {labels.map((item, index) => (
+              <View key={item.tripId} style={styles.radioItem}>
                 <RadioButton
-                  value={`radio${index}`}
+                  value={`radio${item.tripId}`}
                   status={radioValues[index] ? "checked" : "unchecked"}
                   onPress={() => handleRadioChange(index)}
                 />
-                <TextInput
-                  style={styles.textInput}
-                  placeholder={`텍스트 ${index + 1}`}
-                  value={text}
-                  onChangeText={(val) => {
-                    const newTexts = [...texts];
-                    newTexts[index] = val;
-                    setTexts(newTexts);
-                  }}
-                />
+                <Text style={styles.textLabel}>{item.label}</Text>
               </View>
             ))}
           </View>
         )}
+
+        <View style={styles.logoutWrapper}>
+          <Button title="로그아웃" onPress={handleLogout} color="red" />
+        </View>
       </View>
+
       <Button title="사진 선택하기" onPress={pickImage} />
-
       {image && <Image source={{ uri: image.uri }} style={styles.image} />}
-
       <Button title="서버로 전송" onPress={uploadImage} color="#007AFF" />
+      <Button
+        title="선택된 tripId + 사용자 정보 보내기"
+        onPress={sendSelectedTrip}
+        color="green"
+      />
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
-  header: {
-    padding: 10,
-    backgroundColor: "#f0f0f0",
-  },
+  header: { padding: 10, backgroundColor: "#f0f0f0" },
   dropdownButton: {
     padding: 10,
     backgroundColor: "#ddd",
     borderRadius: 5,
   },
   dropdownContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: "column",
     marginTop: 10,
   },
   radioItem: {
+    flexDirection: "row",
     alignItems: "center",
-    width: 60,
+    marginBottom: 8,
   },
-  textInput: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    width: 50,
-    height: 30,
-    paddingHorizontal: 5,
-    fontSize: 12,
+  textLabel: {
+    fontSize: 14,
+    color: "#333",
+    marginLeft: 5,
   },
   image: { width: 300, height: 300, borderRadius: 10 },
-  logoutWrapper: { position: "absolute", top: 50, right: 20 }, // 로그아웃 버튼 위치
+  logoutWrapper: { position: "absolute", top: 50, right: 20 },
 });
-//   return (
-//     <View style={styles.container}>
-//       {/* 상단 로그아웃 버튼 */}
-//       <View style={styles.logoutWrapper}>
-//         <Button title="로그아웃" onPress={handleLogout} color="red" />
-//       </View>
 
-//       <Button title="사진 선택하기" onPress={pickImage} />
-
-//       {image && <Image source={{ uri: image.uri }} style={styles.image} />}
-
-//       <Button title="서버로 전송" onPress={uploadImage} color="#007AFF" />
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     alignItems: "center",
-//     justifyContent: "center",
-//     gap: 20,
-//   },
-//   image: { width: 300, height: 300, borderRadius: 10 },
-//   logoutWrapper: { position: "absolute", top: 50, right: 20 }, // 로그아웃 버튼 위치
-// });
