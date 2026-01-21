@@ -42,7 +42,7 @@ export default function UploadScreen() {
         if (uid) {
           const response = await instance.get(`/labels/getTripTitle/${uid}`);
           const trips = response.data.trips;
-          
+
           setLabels(trips);
 
           // 🚨 [수정] 초기 첫 번째 항목 자동 선택 로직
@@ -148,8 +148,8 @@ export default function UploadScreen() {
                 {labels.length > 0 ? (
                   labels.map((item, index) => (
                     // 🚨 [수정] TouchableOpacity로 감싸서 텍스트 클릭 시에도 선택되게 변경
-                    <TouchableOpacity 
-                      key={item.id} 
+                    <TouchableOpacity
+                      key={item.id}
                       style={styles.radioItem}
                       onPress={() => handleRadioChange(index)}
                       activeOpacity={0.7}
