@@ -29,13 +29,10 @@ export default function LoginScreen() {
     setIsLoading(true);
     try {
       // 1. axios 인스턴스를 사용한 로그인 요청
-      const response = await instance.post(
-        "http://192.168.45.66:5000/api/users/login",
-        {
-          email: email,
-          password: password,
-        },
-      );
+      const response = await instance.post("/users/login", {
+        email: email,
+        password: password,
+      });
       // const response = await instance.post('http://192.168.45.76:5000/api/users/login', {
       //   email: email,
       //   password: password,
