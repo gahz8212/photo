@@ -1,3 +1,39 @@
+// // server.js
+// const express = require("express");
+// const app = express();
+
+// app.use(express.json());
+
+// // 라벨 목록 API
+// app.get("/api/labels", (req, res) => {
+//   const labels = [
+//     { tripId: 1, label: "서울 여행" },
+//     { tripId: 2, label: "부산 여행" },
+//     { tripId: 3, label: "제주도 여행" },
+//     { tripId: 4, label: "강릉 여행" },
+//     { tripId: 5, label: "인천 여행" },
+//   ];
+//   res.json(labels);
+// });
+
+// // tripId + 사용자 정보 받기
+// app.post("/api/select-trip", (req, res) => {
+//   const { tripId, userId, userName } = req.body;
+//   console.log("선택된 tripId:", tripId);
+//   console.log("사용자 정보:", userId, userName);
+
+//   // DB 저장이나 추가 로직 수행
+//   res.json({ success: true, tripId, userId, userName });
+// });
+
+// app.listen(5000, () => {
+//   console.log("Server running on http://localhost:5000");
+// });
+
+
+
+
+
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
@@ -198,6 +234,10 @@ export default function UploadScreen() {
             </TouchableOpacity>
           </View>
         )}
+
+        <View style={styles.logoutWrapper}>
+          <Button title="로그아웃" onPress={handleLogout} color="red" />
+        </View>
       </View>
     </SafeAreaView>
   );
